@@ -1,0 +1,1422 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  ApplicationName:
+    Description: Provide the short name of the Application
+    Type: String
+    MinLength: 3
+    MaxLength: 20
+    Default: "it0"
+  EnvironmentType:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+    MinLength: 2
+    MaxLength: 5
+    AllowedValues:
+      - dev
+      - dev1
+      - dev2
+      - qa
+      - qa1
+      - qa2
+      - stg
+      - stg1
+      - stg2
+      - prod
+      - tcat
+    Default: "dev"
+
+Mappings:
+  "Fn::Transform":
+    Name: "AWS::Include"
+    Parameters:
+      Location: !Sub s3://nissan-${AWS::AccountId}-${AWS::Region}-application-infra-mapping/${ApplicationName}/parameters.yaml
+
+Conditions:
+  ForProd: !Equals [!Ref EnvironmentType, "prod"]
+  #ForQa: !Equals [!FindInMap [ParametersMap, !Ref EnvironmentType],"qa"]
+  ForQa: !Equals [!Ref EnvironmentType, "qa"]
+  ForDev: !Equals [!Ref EnvironmentType, "dev"]
+  ForDev1: !Equals [!Ref EnvironmentType, "dev1"]  
+
+Resources:
+#SNS #
+  SNSTopicCW:
+    Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+    Properties:
+      ProductName: SnsTopicCW
+      ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-snstopic-cloudwatchalarm"
+      ProvisioningArtifactName: "1.0"
+      ProvisioningParameters:
+        - Key: EnvironmentName
+          Value: !Sub "${ApplicationName}-${EnvironmentType}"
+        - Key: OperationsEmail
+          Value:
+            !FindInMap [ParametersMap, !Ref EnvironmentType, OperationsEmail]
+      Tags: 
+        - Key: "application-name"
+          Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+        - Key: "application-code"
+          Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode]
+
+# # EC2#
+#   EC2:
+#     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#     Properties:
+#       ProductName: EC2
+#       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-ec2'
+#       ProvisioningArtifactName: '7.0'
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub '${ApplicationName}-${EnvironmentType}'
+#         - Key: ImageId
+#           Value: AmiId
+#         - Key: AmiId
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, AmiId]
+#         - Key: InstanceType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, InstanceType]
+#         - Key: Monitoring
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, Monitoring]
+#         - Key: SecurityGroup
+#           Value: !GetAtt SecurityGroupEC2.Outputs.GroupId
+#         - Key: RootVolumeSize
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, RootVolumeSize]
+#         - Key: RootVolumeType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, RootVolumeType]
+#         - Key: IopsNumber
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, RootVolumeIopsNumber]          
+#         - Key: RootVolumeDeviceName
+#           Value: '/dev/sda1'
+#         - Key: SNSTopic
+#           Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+#       Tags:
+#           - Key: "application-code"
+#             Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode] 
+
+
+# ## EC2 Security Group
+#   SecurityGroupEC2:
+#     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#     Properties:
+#       ProductName: SecurityGroup
+#       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-ec2-sg'
+#       ProvisioningArtifactName: '2.0'
+#       ProvisioningParameters:
+#         - Key: GroupName
+#           Value: !Sub '${ApplicationName}-${EnvironmentType}-ec2-sg'
+#         - Key: GroupDescription
+#           Value: !Sub '${ApplicationName}-${EnvironmentType}-ec2-sg'
+#         - Key: AddCommonOutboundRules
+#           Value: 'true'
+#       Tags: 
+#         - Key: "application-name"
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+#         - Key: "application-code"
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode] 
+
+# ## Creates EBS Volume#
+#   EBSVolume:
+#     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#     Properties:
+#       ProductName: EBS
+#       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-EBS'
+#       ProvisioningArtifactName: '2.0'
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub '${ApplicationName}-${EnvironmentType}'
+#         - Key: VolumeSize
+#           Value: '30'
+#         - Key: VolumeType
+#           Value: 'gp3'
+#         - Key: IopsNumber
+#           Value: '500'
+#         - Key: Throughput
+#           Value: '593'
+#         - Key: Zone
+#           Value: 'AZ2'
+#         # - Key: InstanceId
+#         #   Value: 'i-09609745678'
+#         # - Key: Iops
+#         #   Value: 250
+
+# #sec group for rds
+#   SecurityGroupRDS:
+#     Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#     Properties:
+#       ProductName: SecurityGroup
+#       ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-rds-it0-sg"
+#       ProvisioningArtifactName: "2.0"
+#       ProvisioningParameters:
+#         - Key: GroupName
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-rds-it0-sg"
+#         - Key: GroupDescription
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-rds-it0-sg"
+#         - Key: AddCommonOutboundRules
+#           Value: "false"
+#       Tags: 
+#         - Key: "application-name"
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+#         - Key: "application-code"
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode] 
+        
+# ## RDS-Mysql testing
+#   RDSMysql:
+#     Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#     Properties:
+#       ProductName: RDS
+#       ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-mysql-rds"
+#       ProvisioningArtifactName: "7.0"
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-mysql-db"
+#         - Key: ApplicationName
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, RDSApplicationName1]
+#         - Key: CotsApplication
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, CotsApplication]
+#         - Key: DBInstanceIdentifier
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-mysql-rds"
+#         # - Key: DBSnapshotIdentifier
+#         #   Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBSnapshotIdentifier1]            
+#         - Key: AllocatedStorage
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               RDSIT0AllocatedStorage1,
+#             ]
+#         - Key: DBInstanceClass
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, DBInstanceClass1]
+#         - Key: DatabaseName
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, RDSIT0DatabaseName1]
+#         - Key: DBType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBType1]
+#         - Key: DBEngineType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBEngineType1]
+#         - Key: DBTimeZone
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBTimeZone]
+#         - Key: PreferredBackupWindow
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               PreferredBackupWindow,
+#             ]
+#         - Key: BackupRetentionPeriod
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               BackupRetentionPeriod1,
+#             ]
+#         - Key: PreferredMaintenanceWindow
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               PreferredMaintenanceWindow,
+#             ]
+#         - Key: SecurityGroup
+#           Value: !GetAtt SecurityGroupRDS.Outputs.GroupId
+#         - Key: SNSTopic
+#           Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+#         # - Key: S3BucketIntegration
+#         #   Value: 'oracle'
+#         # - Key: S3Bucket
+#         #   Value: 'rds-s3-integration-it0'
+#         # - Key: EngineName
+#         #   Value: 'none'
+#         # - Key: MajorEngineVersion
+#         #   Value: '8.0'
+
+
+
+
+
+
+
+
+
+          
+# ## Creates LoadBalancer Target Group with custom configuration ## No Targets Registration
+#   LoadBalancerTargetGroup:
+#     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#     Properties:
+#       ProductName: LoadBalancerTargetGroup
+#       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-LB-target-group'
+#       ProvisioningArtifactName: '2.0'
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub '${ApplicationName}-${EnvironmentType}'
+#         - Key: TargetType
+#           Value: lambda
+
+#   RDS1SecretManagerROTEST:
+#     Condition: ForQa
+#     Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#     Properties:
+#       ProductName: SecretsManagerRandom
+#       ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-oracle-it0-userro-rds"
+#       ProvisioningArtifactName: "1.0"
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-it0-ro"
+#         - Key: GenerateStringKey
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, GenerateStringKeyro]
+#         - Key: StringLength
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, StringLength]
+#       Tags: 
+#         - Key: "application-name"
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+#         - Key: "application-code"
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode]
+
+  # EC2Linuxqa:
+  #   Condition: ForDev 
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: EC2
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-linux-ec2-e2e-test-qa"
+  #     ProvisioningArtifactName: "6.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-E2E-Testserver-qa"
+  #       - Key: AvailabilityZone
+  #         Value: AZ2
+  #       - Key: ImageId
+  #         Value: "AmiId"
+  #       - Key: AmiId
+  #         Value: "ami-00c06014698d1c87d"
+  #       - Key: InstanceType
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, EC2InstanceType]
+  #       - Key: Monitoring
+  #         Value: "false"
+  #       - Key: SecurityGroup
+  #         Value: !GetAtt SecurityGroupEC2.Outputs.GroupId
+  #       - Key: RootVolumeSize
+  #         Value: "500"
+  #       - Key: RootVolumeDeviceName
+  #         Value: /dev/sda1
+  #       - Key: SNSTopic
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, SNSTopic]            
+
+#   RDS1SecretManagerROTEST1:
+#     Condition: ForDev
+#     Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#     Properties:
+#       ProductName: SecretsManagerRandom
+#       ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-oracle-it0-userro-rds"
+#       ProvisioningArtifactName: "1.0"
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-it0-ro"
+#         - Key: GenerateStringKey
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, GenerateStringKeyro]
+#         - Key: StringLength
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, StringLength]
+#       Tags: 
+#         - Key: "application-name"
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+#         - Key: "application-code"
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode] 
+# EC2 Instance
+  # EC2Linux1:
+  #   Condition: ForDev
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: EC2
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-linux-ec2-e2e-test1"
+  #     ProvisioningArtifactName: "8.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-E2E-devserver"
+  #       - Key: AvailabilityZone
+  #         Value: AZ2
+  #       - Key: ImageId
+  #         Value: "AmiId"
+  #       - Key: AmiId
+  #         Value: "ami-0c52780b3fa8dd4f7"
+  #       - Key: InstanceType
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, EC2InstanceType]
+  #       - Key: Monitoring
+  #         Value: "false"
+  #       - Key: SecurityGroup
+  #         Value: !GetAtt SecurityGroupEC2.Outputs.GroupId
+  #       - Key: RootVolumeSize
+  #         Value: "500"
+  #       - Key: RootVolumeDeviceName
+  #         Value: /dev/sda1
+  #       - Key: SNSTopic
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, SNSTopic] 
+
+  # EC2Linux2:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: EC2
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-linux-ec2-e2e-common"
+  #     ProvisioningArtifactName: "8.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-E2E-common"
+  #       - Key: AvailabilityZone
+  #         Value: AZ2
+  #       - Key: ImageId
+  #         Value: "AmiId"
+  #       - Key: AmiId
+  #         Value: "ami-0c52780b3fa8dd4f7"
+  #       - Key: InstanceType
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, EC2InstanceType]
+  #       - Key: Monitoring
+  #         Value: "false"
+  #       - Key: SecurityGroup
+  #         Value: !GetAtt SecurityGroupEC2.Outputs.GroupId
+  #       - Key: RootVolumeSize
+  #         Value: "610"
+  #       - Key: RootVolumeDeviceName
+  #         Value: /dev/sda1
+  #       - Key: SNSTopic
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, SNSTopic]                               
+            
+# EC2 Instance
+  # EC2Linux:
+  #   Condition: ForDev1  
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: EC2
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-linux-ec2-e2e-test"
+  #     ProvisioningArtifactName: "8.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-E2E-dev1server"
+  #       - Key: AvailabilityZone
+  #         Value: AZ2
+  #       - Key: ImageId
+  #         Value: "AmiId"
+  #       - Key: AmiId
+  #         Value: "ami-0c52780b3fa8dd4f7"
+  #       - Key: InstanceType
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, EC2InstanceType]
+  #       - Key: Monitoring
+  #         Value: "false"
+  #       - Key: SecurityGroup
+  #         Value: !GetAtt SecurityGroupEC2.Outputs.GroupId
+  #       - Key: RootVolumeSize
+  #         Value: "500"
+  #       - Key: RootVolumeDeviceName
+  #         Value: /dev/sda1
+  #       - Key: SNSTopic
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, SNSTopic]
+
+  # RDSIT0:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: RDS
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-oracle-e2e-it0-test-rds"
+  #     ProvisioningArtifactName: "5.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-test"
+  #       - Key: ApplicationName
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, RDSApplicationName]
+  #       - Key: CotsApplication
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, CotsApplication]
+  #       - Key: DBInstanceIdentifier
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-test"
+  #       - Key: AllocatedStorage
+  #         Value:
+  #           !FindInMap [
+  #             ParametersMap,
+  #             !Ref EnvironmentType,
+  #             RDSIT0AllocatedStorage,
+  #           ]
+  #       - Key: DBInstanceClass
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, DBInstanceClass]
+  #       # - Key: DBSnapshotIdentifier
+  #       #   Value:
+  #       #     !FindInMap [ParametersMap, !Ref EnvironmentType, IT0DBSnapshotIdentifier]            
+  #       - Key: DatabaseName
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, RDSIT0DatabaseName]
+  #       - Key: DBType
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBType]
+  #       - Key: DBEngineType
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBEngineType]
+  #       - Key: DBTimeZone
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBTimeZone]
+  #       - Key: PreferredBackupWindow
+  #         Value:
+  #           !FindInMap [
+  #             ParametersMap,
+  #             !Ref EnvironmentType,
+  #             PreferredBackupWindow,
+  #           ]
+  #       - Key: BackupRetentionPeriod
+  #         Value:
+  #           !FindInMap [
+  #             ParametersMap,
+  #             !Ref EnvironmentType,
+  #             BackupRetentionPeriod,
+  #           ]
+  #       - Key: PreferredMaintenanceWindow
+  #         Value:
+  #           !FindInMap [
+  #             ParametersMap,
+  #             !Ref EnvironmentType,
+  #             PreferredMaintenanceWindow,
+  #           ]
+  #       - Key: SecurityGroup
+  #         Value: !GetAtt SecurityGroupRDS.Outputs.GroupId
+  #       - Key: SNSTopic
+  #         Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+  #     Tags: 
+  #       - Key: "application-name"
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+  #       - Key: "application-code"
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode]             
+
+
+ 
+
+  # SGInboundRuleRDSSharedEC2:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: SecurityGroup-Custom-InboundRule
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-rds-it0-sharedec2-inbound-rule"
+  #     ProvisioningArtifactName: "2.0"
+  #     ProvisioningParameters:
+  #       - Key: GroupId
+  #         Value: !GetAtt SecurityGroupRDS.Outputs.GroupId
+  #       - Key: Description
+  #         Value: !Sub "Allow Custom ${ApplicationName}-rds-it0-sharedec2 inbound rule"
+  #       - Key: StartPort
+  #         Value: "1521"
+  #       - Key: EndPort
+  #         Value: "1521"
+  #       - Key: CidrIp
+  #         Value: "10.2.5.174/32"          
+
+  ## Lambda Function
+  # Lambda:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: Lambda
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-lambda"
+  #     ProvisioningArtifactName: "6.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !If
+  #           - ForProd
+  #           - !Ref ApplicationName
+  #           - !Sub "${ApplicationName}-${EnvironmentType}"
+  #       - Key: PackageType
+  #         Value: "Zip"
+  #       - Key: SecurityGroup
+  #         Value: !GetAtt LambdaSecurityGroup.Outputs.GroupId ## Refer SecurityGroup Product RunBook for creating Security Groups Blueprint.
+  #       - Key: LambdaHandler
+  #         Value: tests.lambda_handler
+
+  ## Creates an IAM Role
+  #   ECSTaskRole:
+  #     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+  #     Properties:
+  #       ProductName: IAM-Role
+  #       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-backend-iam-role'
+  #       ProvisioningArtifactName: '5.0'
+  #       ProvisioningParameters:
+  #         - Key: EnvironmentName
+  #           Value: !Sub '${ApplicationName}-${EnvironmentType}-ingestion'
+  #         - Key: ServiceName
+  #           Value: 'iam-role'            ## Replace with the service/principal which needs permission to assume this role
+  #         - Key: AssumeRoleArn
+  #           Value: 'arn:aws:iam::111111111111:role/test-cross-acc-role'   ## Replace with the role arn which needs permission to assume this role.
+  #                                                                         ## Required only if the ServiceName is iam-role. Skip this parameter for other services.
+
+  # ## Attaches policies to the Role that allow access to an S3 Bucket and SQS Queue
+  #   ECSTaskRolePolicies:
+  #     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+  #     Properties:
+  #       ProductName: IAM-Policies
+  #       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-backend-iam-role-policies'
+  #       ProvisioningArtifactName: '1.0'
+  #       ProvisioningParameters:
+  #         - Key: EnvironmentName
+  #           Value: !Sub '${ApplicationName}-${EnvironmentType}'
+  #         - Key: RoleArn
+  #           Value: !GetAtt ECSTaskRole.Outputs.RoleARN        ## OUtputs of the IAM-Role product is referenced here.
+  #         - Key: ResourceArns
+  #           Value: !Join
+  #             - ","
+  #             -
+  #               - !GetAtt SQSQueue.Outputs.QueueARN
+  #               - !GetAtt S3Bucket.Outputs.S3BucketArn   ## SQSQueue and S3Bucket should be replaced with actual resource names
+
+  ## Creates an IAM Policies
+  # LambdaPolicies:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: IAM-Policies
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-lambda-iam-role-policies"
+  #     ProvisioningArtifactName: "1.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !If
+  #           - ForProd
+  #           - !Ref ApplicationName
+  #           - !Sub "${ApplicationName}-${EnvironmentType}"
+  #       - Key: RoleArn
+  #         Value: !GetAtt Lambda.Outputs.LambdaFunctionARN
+  #       - Key: ResourceArns
+  #         Value: !GetAtt S3LambdaTest.Outputs.S3BucketArn
+
+  ##S3 TOPIC
+  # S3LambdaTest:
+  #   Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+  #   Properties:
+  #     ProductName: S3
+  #     ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-s3lambda'
+  #     ProvisioningArtifactName: '7.0'
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !If
+  #           - ForProd
+  #           - !Ref ApplicationName
+  #           - !Sub '${ApplicationName}-${EnvironmentType}-s3lambda'
+  #       - Key: BucketName
+  #         Value: !Join
+  #           - '-'
+  #           -
+  #             - nissan
+  #             - nml
+  #             - !Ref ApplicationName
+  #             - !If
+  #               - ForProd
+  #               - !Ref AWS::NoValue
+  #               - !Ref EnvironmentType
+  #             - !Ref AWS::Region
+  #       - Key: BucketSizeLimit
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, S3BucketSize]
+  #       - Key: ApplicationRoleARN
+  #         Value: !GetAtt Lambda.Outputs.LambdaRoleArn
+  #       - Key: SNSTopic
+  #         Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+  # Tags:
+  #   - Key: "application-name"
+  #     Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+  #   - Key: "application-code"
+  #     Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode]
+
+  # ## S3 Bucket
+  # S3DataIngestion:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: S3
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-data-ingestion-s3"
+  #     ProvisioningArtifactName: "6.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !If
+  #           - ForProd
+  #           - !Ref ApplicationName
+  #           - !Sub "${ApplicationName}-${EnvironmentType}"
+  #       - Key: BucketName
+  #         Value: !Join
+  #           - "-"
+  #           - - nissan
+  #             - nml
+  #             - !Ref ApplicationName
+  #             - !If
+  #               - ForProd
+  #               - !Ref AWS::NoValue
+  #               - !Ref EnvironmentType
+  #             - !FindInMap [ParametersMap, !Ref EnvironmentType, DataBucket]
+  #             - !Ref AWS::Region
+  #       - Key: ApplicationRoleARN
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationRoleARN]
+  #       - Key: SNSTopic
+  #         Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+
+  # #Security Groups
+  # SecurityGroupEC2:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: SecurityGroup
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-ec2-sg"
+  #     ProvisioningArtifactName: "2.0"
+  #     ProvisioningParameters:
+  #       - Key: GroupName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-ec2-sg"
+  #       - Key: GroupDescription
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-ec2-sg"
+  #       - Key: AddCommonOutboundRules
+  #         Value: "true"
+
+  # SecurityGroupLambda:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: SecurityGroup
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-lambda-sg"
+  #     ProvisioningArtifactName: "2.0"
+  #     ProvisioningParameters:
+  #       - Key: GroupName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-lambda-sg"
+  #       - Key: GroupDescription
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-lambda-sg"
+  #       - Key: AddCommonOutboundRules
+  #         Value: "true" ## This opens outbound for https(proxy),dns,smtp
+  ## SNS Topic for CloudWatch Alarms
+
+#   DynamoDbTable:
+#     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#     Properties:
+#       ProductName: DynamoDb
+#       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-dynamodbtable1'
+#       ProvisioningArtifactName: '3.0'
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !If
+#             - ForProd
+#             - !Ref ApplicationName
+#             - !Sub '${ApplicationName}-${EnvironmentType}'
+#         - Key: Environment
+#           Value: !Ref EnvironmentType
+#         - Key: TableName
+#           Value: !Sub '${ApplicationName}_${EnvironmentType}_POC_Table'      ## Replace the suffix with actual table purpose
+#         - Key: PartitionKeyName
+#           Value: 'documentId'
+#         - Key: PartitionKeyType
+#           Value: 'S'
+# ## For Cloudwatch Alarms Notification  ##
+#         - Key: SNSTopic
+#           Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+# ##### Below Parameters is required to set BILLING and SCALING Mode. Default is Provisioned #######
+#         - Key: BillingAndScalingMode
+#           Value: 'ONDEMAND'
+# ##### Below Parameters are required to set the capacity units for table ####### Modify the values as per usecase #####
+#         # - Key: MinReadCapacityUnits
+#         #   Value: '1'
+#         # - Key: MinWriteCapacityUnits
+#         #   Value: '1'
+# ##### Below Parameters are required to set SORT KEY. Include these parameters in Blueprint only if required #######
+#         - Key: SortKeyName
+#           Value: 'id'
+#         - Key: SortKeyType
+#           Value: 'N'
+# ##### Below Parameters are required to set TTL. Include these parameters in Blueprint only if required #######
+#         - Key: TimeToLiveAttributeName
+#           Value: ''
+##### Below Parameters are required to enable autoscaling. Include these parameters in Blueprint only if required to override default #######
+# - Key: EnableAutoScaling
+#   Value: 'true'                                       ## Default is 'false'
+# - Key: MaxReadCapacityUnits
+#   Value: '10'
+# - Key: MaxWriteCapacityUnits
+#   Value: '10'
+# - Key: ReadCapacityUnitsUtilizationTarget
+#   Value: '80'
+# - Key: WriteCapacityUnitsUtilizationTarget
+#   Value: '80'
+##### Below Parameters are required to enable PITR. Include these parameters in Blueprint only if required to override default #######
+# - Key: EnablePointInTimeRecovery
+#   Value: 'true'                ## Default is 'false'
+##### Below Parameters are required to enable Stream. Include these parameters in Blueprint only if required to override default #######
+# - Key: StreamViewType
+#   Value: 'NEW_IMAGE'
+
+## SAGEMAKER endpoint
+# SagemakerInferenceEndpoint:
+#   Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#   Properties:
+#     ProductName: SagemakerEndpoint
+#     ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-sagemaker-endpoint'
+#     ProvisioningArtifactName: '1.0'
+#     ProvisioningParameters:
+#       - Key: EnvironmentName
+#         Value: !If
+#           - ForProd
+#           - !Ref ApplicationName
+#           - !Sub '${ApplicationName}-${EnvironmentType}'
+#       - Key: ApplicationRole
+#         Value: !GetAtt ECSTaskExecutionIamRole.Outputs.RoleName
+#       - Key: ModelExecutionRole
+#         Value: !GetAtt SagemakerExecutionIamRole.Outputs.RoleName
+#       - Key: SecurityGroupId
+#         Value: !GetAtt SecurityGroupSagemaker.Outputs.GroupId
+
+# SagemakerExecutionIamRole:
+#   Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#   Properties:
+#     ProductName: IAM-Role
+#     ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-backend-iam-role'
+#     ProvisioningArtifactName: '3.0'
+#     ProvisioningParameters:
+#       - Key: EnvironmentName
+#         Value: !Sub '${ApplicationName}-${EnvironmentType}-ingestion'
+#       - Key: ServiceName
+#         Value: 'sagemaker'
+
+# KinesisSecurityGroup:
+#   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#   Properties:
+#     ProductName: SecurityGroup
+#     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-kinesis-sg"
+#     ProvisioningArtifactName: "2.0"
+#     ProvisioningParameters:
+#       - Key: GroupName
+#         Value: !Sub "${ApplicationName}-${EnvironmentType}-kinesis-sg"
+#       - Key: GroupDescription
+#         Value: !Sub "${ApplicationName}-${EnvironmentType}-kinesis-sg"
+#       - Key: AddCommonOutboundRules
+#         Value: "true" ## This opens outbound for https(proxy),dns,smtp
+
+# ECSTaskExecutionIamRole:
+#   Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#   Properties:
+#     ProductName: IAM-Role
+#     ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-task-iam-role'
+#     ProvisioningArtifactName: '2.0'
+#     ProvisioningParameters:
+#       - Key: EnvironmentName
+#         Value: !Sub '${ApplicationName}-${EnvironmentType}-ingestion'
+#       - Key: ServiceName
+#         Value: "ecs-task-execution"
+
+# MemeCacheCluster:
+#   Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#   Properties:
+#     ProductName: ElasticCacheMemcache
+#     ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-memcache'
+#     ProvisioningArtifactName: '1.0'
+#     ProvisioningParameters:
+#       - Key: EnvironmentName
+#         Value: !Sub '${ApplicationName}-${EnvironmentType}'
+#       - Key: EngineVersion
+#         Value: '1.5.16'
+#       - Key: NumCacheNodes
+#         Value: '1'
+#       - Key: CacheNodeType
+#         Value: 'cache.t2.micro'
+#       - Key: SecurityGroup
+#         Value: !GetAtt CacheClusterSecurityGroup.Outputs.GroupId
+#       - Key: PreferredMaintenanceWindow
+#         Value: 'sat:07:00-sat:08:30'
+#       - Key: SNSTopic
+#         Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+
+## Creates Kinesis Data Stream
+#   KinesisStream:
+#     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#     Properties:
+#       ProductName: KinesisDataStream
+#       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-kinesis-datastream'
+#       ProvisioningArtifactName: '2.0'
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub '${ApplicationName}-${EnvironmentType}'
+#         - Key: ShardCount
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ShardCount]
+#         - Key: SNSTopic
+#           Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+
+# # Creates Kinesis Data Stream Consumer and registers it to Stream ## Include only if required
+# KinesisStreamConsumer:
+#   Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#   Properties:
+#     ProductName: KinesisDataStreamConsumer
+#     ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-kinesis-datastream-consumer'
+#     ProvisioningArtifactName: '1.0'
+#     ProvisioningParameters:
+#       - Key: EnvironmentName
+#         Value: !Sub '${ApplicationName}-${EnvironmentType}'
+#       - Key: KinesisDataStreamARN
+#         Value: !GetAtt KinesisStream.Outputs.DataStreamARN
+
+# # ## Creates Kinesis Firehose Delivery Stream with Direct Put and S3 Destination and other default settings## Include only if required
+# KinesisDeliveryStream:
+#   Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#   Properties:
+#     ProductName: KinesisFirehoseDeliveryStream
+#     ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-kinesis-firehose'
+#     ProvisioningArtifactName: '3.0'
+#     ProvisioningParameters:
+#       - Key: EnvironmentName
+#         Value: !Sub '${ApplicationName}-${EnvironmentType}'
+#       - Key: DeliveryStreamType
+#         Value: 'KinesisStreamAsSource'
+#       - Key: KinesisStreamName
+#         Value: !GetAtt KinesisStream.Outputs.DataStreamName
+#       - Key: DeliveryDestination
+#         Value: 's3'
+#       - Key: DestinationS3bucketName
+#         Value: !GetAtt S3KinesisDelivery.Outputs.S3BucketName
+#       - Key: SecurityGroup
+#         Value: !GetAtt KinesisDelSecurityGroup.Outputs.GroupId
+
+  # SecurityGroupALB:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: SecurityGroup
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-ALB-sg"
+  #     ProvisioningArtifactName: "2.0"
+  #     ProvisioningParameters:
+  #       - Key: GroupName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-ALB-sg"
+  #       - Key: GroupDescription
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-ALB-sg"
+  #       - Key: AddCommonOutboundRules
+  #         Value: "true" ## This opens outbound for https(proxy),dns,smtp
+
+# S3KinesisDelivery:
+#   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#   Properties:
+#     ProductName: S3
+#     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-data-Kinesis-s3"
+#     ProvisioningArtifactName: "6.0"
+#     ProvisioningParameters:
+#       - Key: EnvironmentName
+#         Value: !If
+#           - ForProd
+#           - !Ref ApplicationName
+#           - !Sub "${ApplicationName}-${EnvironmentType}"
+#       - Key: BucketName
+#         Value: !Join
+#           - "-"
+#           - - nissan
+#             - nml
+#             - !Ref ApplicationName
+#             - !If
+#               - ForProd
+#               - !Ref AWS::NoValue
+#               - !Ref EnvironmentType
+#             - !FindInMap [ParametersMap, !Ref EnvironmentType, DataBucket]
+#             - !Ref AWS::Region
+#       - Key: ApplicationRoleARN
+#         Value:
+#           !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationRoleARN]
+#       - Key: SNSTopic
+#         Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+
+# ##Lambda
+#   Lambda:
+#     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#     Properties:
+#       ProductName: Lambda
+#       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-lambda'
+#       ProvisioningArtifactName: '6.0.IMAGE'
+#       ProvisioningParameters:
+#           - Key: EnvironmentName
+#             Value: !If
+#               - ForProd
+#               - !Ref ApplicationName
+#               - !Sub '${ApplicationName}-${EnvironmentType}'
+#           - Key: PackageType
+#             Value: 'Zip'
+#           - Key: LambdaHandler
+#             Value: !FindInMap [ParametersMap, !Ref EnvironmentType, LambdaHandler]
+#           - Key: LambdaTimeOut
+#             Value: !FindInMap [ParametersMap, !Ref EnvironmentType, LambdaTimeOut]
+#           - Key: LambdaRuntime
+#             Value: !FindInMap [ParametersMap, !Ref EnvironmentType, LambdaRuntime]
+#           - Key: LambdaMemorySize
+#             Value: !FindInMap [ParametersMap, !Ref EnvironmentType, LambdaMemorySize]
+#           - Key: ReservedConcurrency
+#             Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ReservedConcurrency]
+#           - Key: ProvisionedConcurrency
+#             Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ProvisionedConcurrency]
+#           - Key: SecurityGroup
+#             Value: !GetAtt LambdaSecurityGroup.Outputs.GroupId
+#           - Key: SNSTopic
+#             Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+#       Tags:
+#           - Key: "application-name"
+#             Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+#           - Key: "application-code"
+#             Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode]
+
+# ## S3 Static Web Hosting
+#   S3PasswordResetTest:
+#     Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#     Properties:
+#       ProductName: S3
+#       ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-password-reset-test-s3"
+#       ProvisioningArtifactName: "6.0"
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !If
+#             - ForProd
+#             - !Ref ApplicationName
+#             - !Sub "${ApplicationName}-${EnvironmentType}"
+#         - Key: BucketName
+#           Value: !Join
+#             - "-"
+#             - - nissan
+#               - nml
+#               - !Ref ApplicationName
+#               - !If
+#                 - ForProd
+#                 - !Ref AWS::NoValue
+#                 - !Ref EnvironmentType
+#               - "password-reset-test"
+#               - !Ref AWS::Region
+#         - Key: UsedForWebsiteHosting
+#           Value: "true"
+#         - Key: Versioning
+#           Value: "true"
+#         - Key: LifecyclePrefixFilter
+#           Value: "log"
+#         - Key: LifecycleExpirationInDays
+#           Value: "400"
+#         - Key: LifecycleTransitionIAInDays
+#           Value: "81"
+#         - Key: ApplicationRoleARN
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationRoleARN]
+#         - Key: SNSTopic
+#           Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+#       Tags:
+#         - Key: "application-name"
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+#         - Key: "application-code"
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode]
+
+# ## Athena Workgroup
+# Athena:
+#   Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#   Properties:
+#     ProductName: AthenaWorkgroup
+#     ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-athena-workgroup'
+#     ProvisioningArtifactName: '4.0'
+#     ProvisioningParameters:
+#       - Key: EnvironmentName
+#         Value: !If
+#           - ForProd
+#           - !Ref ApplicationName
+#           - !Sub '${ApplicationName}-${EnvironmentType}'
+#       - Key: S3BucketName
+#         Value: !GetAtt S3PasswordResetTest.Outputs.S3BucketName
+#       - Key: S3BucketPath
+#         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, S3BucketPath]
+#       - Key: ApplicationRoleName
+#         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationRoleName]
+#       - Key: DataUsageLimitPerQuery
+#         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DataUsageLimitPerQuery]
+#       - Key: AthenaEngineVersion
+#         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, AthenaEngineVersion]
+
+  # ALBLoadBalancer:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: LoadBalancer
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-ecs-alb"
+  #     ProvisioningArtifactName: "3.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-ecs-alb"
+  #       - Key: LbType
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ALBType]
+  #       - Key: TargetProtocol
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, ALBTargetProtocol]
+  #       - Key: SecurityGroup
+  #         Value: !GetAtt SecurityGroupALB.Outputs.GroupId
+  #       - Key: SnsTopicName
+  #         Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+  #     Tags:
+  #       - Key: "application-name"
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+  #       - Key: "application-code"
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode]
+
+  # ## Target Group for Front End
+  # LoadBalancerTargetGroupALB:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: LoadBalancerTargetGroup
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-ALB-target-group"
+  #     ProvisioningArtifactName: "5.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-ecs-alb"
+  #       - Key: TargetType
+  #         Value: ip
+  #       - Key: TargetPort
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, FETargetPort]
+  #       - Key: HealthCheckPath
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, FEHealthCheckPath]
+  #       - Key: HealthCheckPort
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, FEHealthCheckPort]
+  #       - Key: HealthCheckProtocol
+  #         Value:
+  #           !FindInMap [
+  #             ParametersMap,
+  #             !Ref EnvironmentType,
+  #             FEHealthCheckProtocol,
+  #           ]
+  #       - Key: HealthCheckSuccessHttpCode
+  #         Value:
+  #           !FindInMap [
+  #             ParametersMap,
+  #             !Ref EnvironmentType,
+  #             FEHealthCheckSuccessHttpCode,
+  #           ]
+  #     Tags:
+  #       - Key: "application-name"
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+  #       - Key: "application-code"
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode]
+
+  # ## Listener for ALB
+  # LoadBalancerListenerALB:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: LoadBalancerListener
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-ALB-Listener"
+  #     ProvisioningArtifactName: "3.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-application"
+  #       - Key: LoadBalancerArn
+  #         Value: !GetAtt ALBLoadBalancer.Outputs.LoadBalancer
+  #       - Key: LoadBalancerFullName
+  #         Value: !GetAtt ALBLoadBalancer.Outputs.LoadBalancerFullName
+  #       - Key: TargetGroupArn
+  #         Value: !GetAtt LoadBalancerTargetGroupALB.Outputs.TargetGroupArn
+  #       - Key: LbType
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ALBType]
+  #       - Key: ListenerProtocol
+  #         Value:
+  #           !FindInMap [
+  #             ParametersMap,
+  #             !Ref EnvironmentType,
+  #             ALBListenerProtocol,
+  #           ]
+  #       - Key: ListenerPort
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, ALBListenerPort]
+  #       - Key: SnsTopicName
+  #         Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+
+  # LoadBalancerListenerALBhttps:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: LoadBalancerListener
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-ALB-Listener2"
+  #     ProvisioningArtifactName: "3.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub "${ApplicationName}-${EnvironmentType}-application2"
+  #       - Key: LoadBalancerArn
+  #         Value: !GetAtt ALBLoadBalancer.Outputs.LoadBalancer
+  #       - Key: LoadBalancerFullName
+  #         Value: !GetAtt ALBLoadBalancer.Outputs.LoadBalancerFullName
+  #       - Key: TargetGroupArn
+  #         Value: !GetAtt LoadBalancerTargetGroupALB.Outputs.TargetGroupArn
+  #       - Key: LbType
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ALBType]
+  #       - Key: ListenerProtocol
+  #         Value:
+  #           !FindInMap [
+  #             ParametersMap,
+  #             !Ref EnvironmentType,
+  #             ALBListenerProtocol1,
+  #           ]
+  #       - Key: ListenerPort
+  #         Value:
+  #           !FindInMap [ParametersMap, !Ref EnvironmentType, ALBListenerPort]
+  #       - Key: SnsTopicName
+  #         Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+
+
+  # WAFCloudfront:
+  #   Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+  #   Properties:
+  #     ProductName: WAFv2
+  #     ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-WAF-Cloudfront'
+  #     ProvisioningArtifactName: "4.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !Sub '${ApplicationName}-${EnvironmentType}'
+  #       - Key: WAFScope
+  #         Value: 'REGIONAL'  
+  #       - Key: IPWhitelist
+  #         Value: '' 
+  #       - Key: CSRFTokenRule
+  #         Value: 'false'          
+  #       - Key: ValidationHeaderName
+  #         Value: 'test' 
+  #       - Key: ValidationHeaderValue
+  #         Value: '1234'  
+  #       - Key: ValidationHeaderOperation
+  #         Value: 'EXACTLY'
+
+# ## Associates ALB with WAF
+#   WAFWebACLALBAssociation:
+#     Type: 'AWS::ServiceCatalog::CloudFormationProvisionedProduct'
+#     Properties:
+#       ProductName: WAFv2-WebACL-Association
+#       ProvisionedProductName: !Sub '${ApplicationName}-${EnvironmentType}-WAF-WebACL-ALB-Asscociation'
+#       ProvisioningArtifactName: '1.0'
+#       ProvisioningParameters:
+#         - Key: ResourceArn
+#           Value: !GetAtt ALBLoadBalancer.Outputs.LoadBalancer   ## Replace with correct parameter reference as per the product
+#         - Key: WAFWebACLArn
+#           Value: !GetAtt WAFCloudfront.Outputs.WAFv2WebACLArn        
+
+  # ECSFargateCluster1:
+  #   Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+  #   Properties:
+  #     ProductName: ECSFargateCluster
+  #     ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}--fargate-cluster"
+  #     ProvisioningArtifactName: "1.0"
+  #     ProvisioningParameters:
+  #       - Key: EnvironmentName
+  #         Value: !If
+  #           - ForProd
+  #           - !Sub "${ApplicationName}-test"
+  #           - !Sub "${ApplicationName}-${EnvironmentType}-test"
+  #     Tags: 
+  #       - Key: "application-name"
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationName]
+  #       - Key: "application-code"
+  #         Value: !FindInMap [ParametersMap, !Ref EnvironmentType, ApplicationCode]      
+
+## RDS cm
+#   RDS1:
+#     Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#     Properties:
+#       ProductName: RDS
+#       ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-oracle-cm-rds"
+#       ProvisioningArtifactName: "7.0"
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-cm"
+#         - Key: ApplicationName
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, RDSApplicationName]
+#         - Key: CotsApplication
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, CotsApplication]
+#         - Key: DBInstanceIdentifier
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-cm"
+#         - Key: DBSnapshotIdentifier
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBSnapshotIdentifier1]            
+#         - Key: AllocatedStorage
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               RDSIT0AllocatedStorage,
+#             ]
+#         - Key: DBInstanceClass
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, DBInstanceClass]
+#         - Key: DatabaseName
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, RDSIT0DatabaseName]
+#         - Key: DBType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBType]
+#         - Key: DBEngineType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBEngineType]
+#         - Key: DBTimeZone
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBTimeZone]
+#         - Key: PreferredBackupWindow
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               PreferredBackupWindow,
+#             ]
+#         - Key: BackupRetentionPeriod
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               BackupRetentionPeriod,
+#             ]
+#         - Key: PreferredMaintenanceWindow
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               PreferredMaintenanceWindow,
+#             ]
+#         - Key: SecurityGroup
+#           Value: !GetAtt SecurityGroupRDS.Outputs.GroupId
+#         - Key: SNSTopic
+#           Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+#         - Key: S3BucketIntegration
+#           Value: 'oracle'
+#         - Key: S3Bucket
+#           Value: 'rds-s3-integration-it0'
+#         - Key: EngineName
+#           Value: 'oracle-se2'
+#         - Key: MajorEngineVersion
+#           Value: '19'
+
+# ## RDS core
+#   RDS2:
+#     Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#     Properties:
+#       ProductName: RDS
+#       ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-oracle-core-rds"
+#       ProvisioningArtifactName: "7.0"
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-core"
+#         - Key: ApplicationName
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, RDSApplicationName]
+#         - Key: CotsApplication
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, CotsApplication]
+#         - Key: DBInstanceIdentifier
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-core"
+#         # - Key: DBSnapshotIdentifier
+#         #   Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBSnapshotIdentifier1]            
+#         - Key: AllocatedStorage
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               RDSIT0AllocatedStorage,
+#             ]
+#         - Key: DBInstanceClass
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, DBInstanceClass]
+#         - Key: DatabaseName
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, RDSIT0DatabaseName]
+#         - Key: DBType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBType]
+#         - Key: DBEngineType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBEngineType]
+#         - Key: DBTimeZone
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBTimeZone]
+#         - Key: PreferredBackupWindow
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               PreferredBackupWindow,
+#             ]
+#         - Key: BackupRetentionPeriod
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               BackupRetentionPeriod,
+#             ]
+#         - Key: PreferredMaintenanceWindow
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               PreferredMaintenanceWindow,
+#             ]
+#         - Key: SecurityGroup
+#           Value: !GetAtt SecurityGroupRDS.Outputs.GroupId
+#         - Key: SNSTopic
+#           Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+#         - Key: S3BucketIntegration
+#           Value: 'oracle'
+#         - Key: S3Bucket
+#           Value: 'rds-s3-integration-it0'
+#         - Key: EngineName
+#           Value: 'oracle-se2'
+#         - Key: MajorEngineVersion
+#           Value: '19'
+
+
+
+# ## RDS core
+#   RDS3:
+#     Type: "AWS::ServiceCatalog::CloudFormationProvisionedProduct"
+#     Properties:
+#       ProductName: RDS
+#       ProvisionedProductName: !Sub "${ApplicationName}-${EnvironmentType}-oracle-core-rds3"
+#       ProvisioningArtifactName: "7.0"
+#       ProvisioningParameters:
+#         - Key: EnvironmentName
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-core-db"
+#         - Key: ApplicationName
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, RDSApplicationName]
+#         - Key: CotsApplication
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, CotsApplication]
+#         - Key: DBInstanceIdentifier
+#           Value: !Sub "${ApplicationName}-${EnvironmentType}-core-db"
+#         # - Key: DBSnapshotIdentifier
+#         #   Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBSnapshotIdentifier1]            
+#         - Key: AllocatedStorage
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               RDSIT0AllocatedStorage,
+#             ]
+#         - Key: DBInstanceClass
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, DBInstanceClass]
+#         - Key: DatabaseName
+#           Value:
+#             !FindInMap [ParametersMap, !Ref EnvironmentType, RDSIT0DatabaseName]
+#         - Key: DBType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBType]
+#         - Key: DBEngineType
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBEngineType]
+#         - Key: DBTimeZone
+#           Value: !FindInMap [ParametersMap, !Ref EnvironmentType, DBTimeZone]
+#         - Key: PreferredBackupWindow
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               PreferredBackupWindow,
+#             ]
+#         - Key: BackupRetentionPeriod
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               BackupRetentionPeriod,
+#             ]
+#         - Key: PreferredMaintenanceWindow
+#           Value:
+#             !FindInMap [
+#               ParametersMap,
+#               !Ref EnvironmentType,
+#               PreferredMaintenanceWindow,
+#             ]
+#         - Key: SecurityGroup
+#           Value: !GetAtt SecurityGroupRDS.Outputs.GroupId
+#         - Key: SNSTopic
+#           Value: !GetAtt SNSTopicCW.Outputs.CWSNSTopicName
+#         - Key: S3BucketIntegration
+#           Value: 'oracle'
+#         - Key: S3Bucket
+#           Value: 'rds-s3-integration-it0'
+#         - Key: EngineName
+#           Value: 'oracle-se2'
+#         - Key: MajorEngineVersion
+#           Value: '19'
+

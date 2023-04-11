@@ -1,0 +1,111 @@
+ParametersMap:
+  dev:
+    ## Common Parameters
+    SNSTopic: 'ec2-mode2'
+    OperationsEmail: "list.rntbci_cloud_ops@renault.com"
+    ApplicationName: "IT0-Common"
+    ApplicationCode: "IT0"
+
+    ## S3 Parameters
+    # S3BucketSize: "10687091200"
+   
+    # ## EC2 Parameters
+    EC2InstanceType: 'm5.2xlarge'
+    AmiId: "ami-0c3c110f0b80049cb"
+    RootVolumeSize: "60"
+    EfsDirectoryName: "storage"
+    RootVolumeSize: "260"
+    RootVolumeType: "gp3"
+    RootVolumeIopsNumber: "3000"
+    
+    ## RDS Parameters#
+    CotsApplication: "true"
+    DBInstanceClass: "db.r5.2xlarge"
+    DBType: "oracle-se2-19.0.0.0.ru-2020-10"
+    DBEngineType: "oracle"
+    PreferredBackupWindow: "15:00-15:30"
+    PreferredMaintenanceWindow: "sun:17:00-sun:17:30"
+    BackupRetentionPeriod: "30"
+    RDSIT0AllocatedStorage: "200"
+    RDSIT0DatabaseName: "it0test"
+    DBTimeZone: ""
+    RDSApplicationName: "itzero"
+    IT0DBSnapshotIdentifier: ""
+    DBSnapshotIdentifier1: "dcw-qa-core-backup-03112021"
+    #IT0DBSnapshotIdentifier: "arn:aws:rds:ap-northeast-1:172761649922:snapshot:dcw-qa-snapshot-oct-20-2021-bkup-restore-test"
+
+    ### Mysql RDS Parameters
+    #CotsApplication: "true"
+    DBInstanceClass1: "db.m5.xlarge"
+    DBType1: "mysql-8.0"
+    DBEngineType1: "mysql"
+    #PreferredBackupWindow: "15:00-15:30"
+    #PreferredMaintenanceWindow: "sun:17:00-sun:17:30"
+    BackupRetentionPeriod1: "14"
+    RDSIT0AllocatedStorage1: "20"
+    RDSIT0DatabaseName1: "itzerotestmysql"
+    #DBTimeZone: ""
+    RDSApplicationName1: "itzerotest"
+    #IT0DBSnapshotIdentifier: ""
+    #DBSnapshotIdentifier1: "dcw-qa-core-backup-03112021"
+    #IT0DBSnapshotIdentifier: "arn:aws:rds:ap-northeast-1:172761649922:snapshot:dcw-qa-snapshot-oct-20-2021-bkup-restore-test"
+
+
+    GenerateStringKeyro: "e2e_ro"
+    StringLength: "16"
+
+     
+    # ## S3 Parameters
+    # DataBucket: 'kinesis'
+    
+    # ApplicationRoleARN: 'arn:aws:iam::172761649922:role/NML-MODE2-IAMRole-EC2'
+
+    # ## Athena Parameters check
+    # DataUsageLimitPerQuery: "322122547200"
+    # S3BucketPath: "log/accesslog/"
+    # AthenaEngineVersion: "Athena engine version 2"
+    # ApplicationRoleName: "NML-MODE2-IAMRole-EC2"
+
+    # ## Kinesis
+    # ShardCount: '1'
+
+    # ## Lambda
+    # LambdaTimeOut: "120"
+    # LambdaMemorySize: "512"
+    # LambdaRuntime: "java11"
+    # LambdaHandler: "com.nissan.ak.lambdaDataTransfer::handleRequest"
+    # ReservedConcurrency: "5"
+    # ProvisionedConcurrency: "0"    
+
+#  ## Load Balancer Parameters
+#  ## ALB ECS
+#     ALBType: "application"
+#     ALBTargetProtocol: "TCP"
+
+#     ## Listener ALB
+#     ALBListenerProtocol: "HTTP"
+#     ALBListenerProtocol1: "HTTPS"
+#     ALBListenerPort: "80"
+
+#     ## TargetGroup FrontEnd
+#     FETargetPort: "80"
+#     FEHealthCheckPath: "/"
+#     FEHealthCheckPort: "9901"
+#     FEHealthCheckProtocol: "HTTP"
+#     FEHealthCheckSuccessHttpCode: "200-399"
+
+#   qa:
+#     GenerateStringKeyro: "e2e_ro"
+#     StringLength: "16"   
+#   dev1:
+#     ## Common Parameters
+#     SNSTopic: 'ec2-mode2'
+#     OperationsEmail: "list.rntbci_cloud_ops@renault.com"
+#     ApplicationName: "IT0-Common"
+#     ApplicationCode: "IT0"
+
+#     # ## EC2 Parameters
+#     EC2InstanceType: 'm5.xlarge'
+        
+    
+    
